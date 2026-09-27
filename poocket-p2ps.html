@@ -1,0 +1,2469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Pocket P2P</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+--bg:#f5f6f8;--panel:#fff;--line:#e7e8ed;--text:#202228;
+--muted:#8b909b;--soft:#f0f1f4;--accent:#202228;
+--green:#55b879;--red:#d85c5c;--icon:#777c86
+}
+@media(prefers-color-scheme:dark){
+:root{
+--bg:#111217;--panel:#191a1f;--line:#2b2d34;--text:#f2f3f6;
+--muted:#9b9faa;--soft:#25272e;--accent:#d8d2ff;--icon:#c8c1ff
+}
+.top,.rooms,.composer,.setup,.roombar{background:var(--panel)}
+.chat{background:linear-gradient(#191a1f,#15161a)}
+.field,.messageBox,.roomCard{background:#202126;border-color:var(--line)}
+.them{background:#292b32;color:#f1f2f5}
+.empty strong{color:#ddd}
+.logo,.send{background:#ded9ff;color:#24232b}
+.dark{background:#ded9ff;color:#24232b}
+.light{background:#292b32;color:var(--text)}
+}
+*{box-sizing:border-box}
+body{
+margin:0;background:var(--bg);color:var(--text);
+font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif
+}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{
+width:min(760px,100%);height:100dvh;margin:auto;background:var(--panel);
+display:flex;flex-direction:column;overflow:hidden;
+box-shadow:0 0 40px rgba(0,0,0,.06)
+}
+.top{
+padding:14px 18px;border-bottom:1px solid var(--line);
+background:rgba(255,255,255,.96);backdrop-filter:blur(12px);z-index:2
+}
+.topline{
+display:flex;align-items:center;justify-content:space-between;gap:12px
+}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{
+width:38px;height:38px;border-radius:13px;background:#202228;color:#fff;
+display:grid;place-items:center;font-weight:800
+}
+.title{font-size:17px;font-weight:750}
+.sub{font-size:11px;color:var(--muted);margin-top:2px}
+.connection{
+display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted)
+}
+.dot{width:8px;height:8px;border-radius:50%;background:#c7cbd2}
+.dot.on{background:var(--green)}
+
+.profilebar{
+display:none;align-items:center;gap:9px;margin-top:11px;
+padding-top:10px;border-top:1px solid var(--line)
+}
+.avatar{
+width:34px;height:34px;border-radius:50%;object-fit:cover;
+background:var(--soft);flex:none
+}
+.avatarFallback{
+display:grid;place-items:center;font-weight:750;color:var(--muted)
+}
+.profileText{min-width:0}
+.profileName{
+font-size:12px;font-weight:750;white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis
+}
+.profileState{font-size:10px;color:var(--muted);margin-top:2px}
+
+.setup{display:none;padding:12px 18px;background:#fafafa;border-bottom:1px solid var(--line)}
+.field{
+display:flex;align-items:center;background:#fff;border:1px solid var(--line);
+border-radius:13px;padding:4px
+}
+.field input{
+flex:1;border:0;outline:0;background:transparent;
+padding:10px 11px;min-width:0;font-size:14px
+}
+.btn{
+border:0;border-radius:10px;padding:9px 13px;
+font-weight:650;font-size:13px
+}
+.dark{background:var(--accent);color:#fff}
+.light{background:var(--soft);color:var(--text)}
+.joinrow{display:flex;gap:7px;margin-top:8px}
+.joinrow .field{flex:1}
+.hint{
+font-size:10.5px;color:var(--muted);
+line-height:1.45;margin:8px 3px 0
+}
+
+.rooms{
+display:none;padding:10px 18px 12px;
+border-bottom:1px solid var(--line);background:#fff
+}
+.roomsHead{
+display:flex;align-items:center;justify-content:space-between;margin-bottom:7px
+}
+.roomsTitle{font-size:12px;font-weight:750}
+.roomsState{font-size:10px;color:var(--muted)}
+.roomList{display:flex;gap:7px;overflow:auto}
+.roomCard{
+min-width:150px;max-width:210px;border:1px solid var(--line);
+background:#fafafa;border-radius:12px;padding:9px 10px;cursor:pointer
+}
+.roomName{
+font-size:12px;font-weight:700;white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis
+}
+.roomMeta{font-size:10px;color:var(--muted);margin-top:3px}
+.emptyRooms{font-size:10.5px;color:#a0a5af;padding:7px 2px}
+
+.roombar{
+display:none;padding:9px 18px;border-bottom:1px solid var(--line);
+background:#fff;font-size:11px;color:var(--muted)
+}
+.roombar b{color:var(--text);font-weight:700}
+
+.chat{
+flex:1;overflow:auto;padding:18px;display:flex;
+flex-direction:column;gap:8px;background:linear-gradient(#fff,#fcfcfd)
+}
+.empty{margin:auto;text-align:center;color:#a0a5af}
+.emptyIcon{
+width:54px;height:54px;margin:0 auto 12px;border-radius:18px;
+background:var(--soft);display:grid;place-items:center;font-size:23px
+}
+.empty strong{
+display:block;color:#555a64;font-size:14px;margin-bottom:4px
+}
+.empty span{font-size:11px}
+.msg{
+max-width:min(78%,560px);padding:10px 12px;border-radius:16px;
+font-size:14px;line-height:1.45;white-space:pre-wrap;
+overflow-wrap:anywhere
+}
+.me{
+align-self:flex-end;background:#202228;color:#fff;
+border-bottom-right-radius:5px
+}
+.them{
+align-self:flex-start;background:#f0f1f3;color:#25282e;
+border-bottom-left-radius:5px
+}
+.log{text-align:center;font-size:10px;color:#b0b4bd;padding:4px}
+
+.fileCard{
+display:flex;flex-direction:column;gap:8px;
+min-width:210px;max-width:340px
+}
+.fileMeta{display:flex;gap:9px;align-items:center}
+.fileIcon{
+width:36px;height:36px;border-radius:10px;
+background:rgba(255,255,255,.16);display:grid;place-items:center;
+flex:none;font-size:18px
+}
+.them .fileIcon{background:#fff}
+.fileInfo{min-width:0}
+.fileName{
+font-weight:650;white-space:nowrap;
+overflow:hidden;text-overflow:ellipsis
+}
+.fileSize{font-size:10px;opacity:.62;margin-top:2px}
+.mediaPreview{
+display:block;width:min(100%,320px);max-height:360px;
+object-fit:contain;border-radius:10px;background:#000
+}
+.audioPreview{width:min(100%,320px)}
+.downloadBtn{
+display:inline-block;border:0;border-radius:9px;padding:7px 9px;
+background:rgba(128,128,128,.15);color:inherit;
+text-decoration:none;font-size:11px;text-align:center
+}
+.progress{
+height:3px;background:rgba(128,128,128,.18);
+border-radius:99px;overflow:hidden
+}
+.progress i{
+display:block;height:100%;width:0;background:currentColor
+}
+.groupGrid{
+display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px
+}
+.groupThumb{
+width:100%;height:120px;object-fit:cover;
+border-radius:9px;background:#000
+}
+.groupItem{min-width:0}
+
+.composer{
+padding:10px 12px calc(10px + env(safe-area-inset-bottom));
+border-top:1px solid var(--line);background:#fff
+}
+.messageBox{
+display:flex;align-items:center;gap:3px;border:1px solid var(--line);
+background:#f7f7f8;border-radius:14px;padding:3px 4px 3px 8px
+}
+.messageBox input{
+flex:1;min-width:0;border:0;outline:0;
+background:transparent;padding:9px 4px;font-size:14px
+}
+.iconBtn{
+width:38px;height:38px;border:0;border-radius:11px;
+background:transparent;color:var(--icon);font-size:20px
+}
+.send{
+width:38px;height:38px;border:0;border-radius:11px;
+background:#202228;color:#fff;font-size:15px;font-weight:700
+}
+#fileInput,#profileFile{display:none}
+
+.bottomNav{
+display:grid;grid-template-columns:1fr 1fr;gap:8px;
+padding:8px 12px calc(8px + env(safe-area-inset-bottom));
+border-top:1px solid var(--line);background:var(--panel);z-index:10
+}
+.navBtn{
+border:0;background:transparent;color:var(--icon);
+padding:8px 6px;border-radius:13px;font-size:11px;font-weight:700;
+display:flex;flex-direction:column;align-items:center;gap:3px
+}
+.navBtn .navIcon{font-size:21px;line-height:1}
+.navBtn.active{background:var(--soft)}
+
+.sheetBack{
+position:fixed;inset:0;background:rgba(0,0,0,.38);
+z-index:30;display:none;align-items:flex-end
+}
+.sheetBack.show{display:flex}
+.sheet{
+width:min(760px,100%);margin:auto;background:var(--panel);
+border-radius:22px 22px 0 0;
+padding:16px 16px calc(18px + env(safe-area-inset-bottom));
+max-height:75dvh;overflow:auto
+}
+.sheetHandle{
+width:38px;height:4px;border-radius:99px;background:var(--line);
+margin:0 auto 14px
+}
+.sheetTitle{font-size:15px;font-weight:800;margin-bottom:12px}
+.sheet .setup,.sheet .rooms{
+display:block;padding:0;border:0;background:transparent
+}
+.sheet .rooms{margin-top:16px}
+.sheetClose{
+float:right;border:0;background:var(--soft);color:var(--text);
+border-radius:10px;width:32px;height:32px
+}
+
+.overlay{
+position:fixed;inset:0;background:rgba(0,0,0,.5);
+display:flex;align-items:center;justify-content:center;
+padding:20px;z-index:50
+}
+.profileCard{
+width:min(380px,100%);background:var(--panel);
+border-radius:24px;padding:24px;
+box-shadow:0 20px 70px rgba(0,0,0,.25)
+}
+.profileCard h2{margin:0;font-size:20px}
+.profileCard p{
+margin:7px 0 18px;color:var(--muted);
+font-size:12px;line-height:1.5
+}
+.profilePick{
+display:flex;align-items:center;gap:12px;margin-bottom:15px
+}
+.profilePreview{
+width:66px;height:66px;border-radius:50%;object-fit:cover;
+background:var(--soft);display:grid;place-items:center;
+font-size:24px;color:var(--muted)
+}
+.profilePick button{
+border:0;border-radius:11px;padding:9px 12px;
+background:var(--soft);color:var(--text);font-size:12px
+}
+.profileCard .field{margin-bottom:12px}
+.saveRow{
+display:flex;align-items:center;gap:8px;font-size:12px;
+color:var(--muted);margin:8px 2px 16px
+}
+.startBtn{
+width:100%;padding:12px;border:0;border-radius:13px;
+background:var(--accent);color:#fff;font-weight:750
+}
+.guestHint{
+font-size:10px;color:var(--muted);
+margin-top:9px;text-align:center
+}
+.hidden{display:none!important}
+
+@media(max-width:600px){
+.app{box-shadow:none}
+.top{padding-top:calc(12px + env(safe-area-inset-top))}
+.msg{max-width:88%}
+.roomCard{min-width:135px}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<header class="top">
+<div class="topline">
+<div class="brand">
+<div class="logo">P</div>
+<div>
+<div class="title">Pocket P2P</div>
+<div class="sub">online rooms · private · direct</div>
+</div>
+</div>
+<div class="connection">
+<i class="dot" id="dot"></i>
+<span id="status">프로필 준비 중</span>
+</div>
+</div>
+
+<div class="profilebar" id="profileBar">
+<img class="avatar" id="myAvatar">
+<div class="profileText">
+<div class="profileName" id="myName"></div>
+<div class="profileState">내 프로필</div>
+</div>
+</div>
+
+<div class="profilebar" id="peerBar">
+<img class="avatar" id="peerAvatar">
+<div class="profileText">
+<div class="profileName" id="peerName"></div>
+<div class="profileState">상대방 프로필</div>
+</div>
+</div>
+</header>
+
+<div class="sheetBack" id="roomSheetBack">
+<div class="sheet">
+<div class="sheetHandle"></div>
+<button class="sheetClose" id="roomSheetClose">×</button>
+<div class="sheetTitle">방 만들기 / 입장하기</div>
+
+<section class="setup">
+<div class="field">
+<input id="roomName" maxlength="50" placeholder="새 방 이름">
+<button class="btn dark" id="createBtn">방 만들기</button>
+</div>
+
+<div class="joinrow">
+<div class="field">
+<input id="joinName" maxlength="50" placeholder="방 이름으로 입장">
+</div>
+<button class="btn light" id="joinBtn">입장</button>
+</div>
+
+<div class="hint">
+온라인 방을 누르거나 같은 방 이름으로 입장하세요. 방은 1:1입니다.
+</div>
+</section>
+</div>
+</div>
+
+<div class="sheetBack" id="onlineSheetBack">
+<div class="sheet">
+<div class="sheetHandle"></div>
+<button class="sheetClose" id="onlineSheetClose">×</button>
+<div class="sheetTitle">
+온라인 방
+<span class="roomsState" id="roomsState">불러오는 중…</span>
+</div>
+
+<section class="rooms">
+<div class="roomList" id="roomList">
+<div class="emptyRooms">온라인 방을 찾는 중…</div>
+</div>
+</section>
+</div>
+</div>
+
+<div class="roombar" id="roomBar">
+현재 방 · <b id="roomLabel"></b>
+</div>
+
+<main class="chat" id="chat">
+<div class="empty" id="empty">
+<div class="emptyIcon">✦</div>
+<strong>아직 연결되지 않았어요</strong>
+<span>방을 만들거나 온라인 방에 입장하세요.</span>
+</div>
+</main>
+
+<footer class="composer">
+<input id="fileInput" type="file" multiple>
+
+<div class="messageBox">
+<button class="iconBtn" id="fileBtn" title="파일 보내기" disabled>＋</button>
+<input id="message" placeholder="메시지를 입력하세요" disabled>
+<button class="send" id="sendBtn" disabled>↑</button>
+</div>
+</footer>
+
+<nav class="bottomNav">
+<button class="navBtn" id="roomNav">
+<span class="navIcon">🔑</span>
+<span>방 만들기 / 입장</span>
+</button>
+
+<button class="navBtn" id="onlineNav">
+<span class="navIcon">🌐</span>
+<span>온라인 방</span>
+</button>
+</nav>
+
+</div>
+
+<div class="overlay" id="profileOverlay">
+<div class="profileCard">
+<h2>프로필 만들기</h2>
+<p>채팅 상대에게 표시될 이름과 사진을 정해주세요.</p>
+
+<div class="profilePick">
+<div class="profilePreview" id="profilePreview">🙂</div>
+<button id="profilePickBtn">사진 선택</button>
+<input id="profileFile" type="file" accept="image/*">
+</div>
+
+<div class="field">
+<input id="nickname" maxlength="30" placeholder="닉네임">
+</div>
+
+<label class="saveRow">
+<input id="saveProfile" type="checkbox">
+이 기기에 프로필 저장
+</label>
+
+<button class="startBtn" id="startBtn">시작하기</button>
+
+<div class="guestHint">
+닉네임을 비워두면 Guest-XXXX가 사용됩니다.
+</div>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://vhpgssmhbjjzfaqeiprf.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_d5oY02qCY0soSDhNMZND-w_8dulDA4-";
+
+const {createClient}=supabase;
+const sb=createClient(
+SUPABASE_URL,
+SUPABASE_PUBLISHABLE_KEY
+);
+
+const $=id=>document.getElementById(id);
+
+const uid=()=>window.crypto?.randomUUID?.()||
+"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
+const r=Math.random()*16|0;
+const v=c==="x"?r:(r&3)|8;
+return v.toString(16);
+});
+
+const clientId=uid();
+
+const roomIdSafe=s=>s.trim().replace(/\s+/g,"-");
+const validRoom=s=>/^[A-Za-z0-9_-]{3,50}$/.test(s);
+
+const bytes=n=>{
+if(n<1024)return n+" B";
+if(n<1048576)return(n/1024).toFixed(1)+" KB";
+if(n<1073741824)return(n/1048576).toFixed(1)+" MB";
+return(n/1073741824).toFixed(1)+" GB";
+};
+
+let lobby=null;
+let roomChannel=null;
+let currentRoom="";
+let isHost=false;
+let pc=null;
+let dataChannel=null;
+let pendingCandidates=[];
+let remoteDescriptionReady=false;
+let incoming=new Map();
+let incomingGroups=new Map();
+let lobbyRooms=new Map();
+let lobbyJoined=false;
+let sendQueue=Promise.resolve();
+
+let profile={
+name:"",
+avatar:"",
+saved:false
+};
+
+let peerProfile=null;
+
+function status(t,on=false){
+$("status").textContent=t;
+$("dot").classList.toggle("on",on);
+}
+
+function log(t){
+const d=document.createElement("div");
+d.className="log";
+d.textContent=t;
+$("chat").appendChild(d);
+$("chat").scrollTop=1e9;
+}
+
+function clearEmpty(){
+const e=$("empty");
+if(e)e.remove();
+}
+
+function message(t,mine){
+clearEmpty();
+
+const d=document.createElement("div");
+d.className="msg "+(mine?"me":"them");
+d.textContent=t;
+
+$("chat").appendChild(d);
+$("chat").scrollTop=1e9;
+}
+
+function enable(v){
+$("message").disabled=!v;
+$("sendBtn").disabled=!v;
+$("fileBtn").disabled=!v;
+}
+
+function setAvatar(img,src,name){
+if(src){
+img.src=src;
+img.classList.remove("avatarFallback");
+}else{
+img.removeAttribute("src");
+img.classList.add("avatarFallback");
+img.alt=(name||"?").slice(0,1).toUpperCase();
+}
+}
+
+function showMyProfile(){
+$("profileBar").style.display="flex";
+$("myName").textContent=profile.name;
+setAvatar(
+$("myAvatar"),
+profile.avatar,
+profile.name
+);
+}
+
+function showPeerProfile(p){
+peerProfile=p;
+
+$("peerBar").style.display="flex";
+$("peerName").textContent=p.name||"상대방";
+
+setAvatar(
+$("peerAvatar"),
+p.avatar,
+p.name
+);
+}
+
+function loadProfile(){
+try{
+const p=JSON.parse(
+localStorage.getItem("pocket_p2p_profile")||"null"
+);
+
+if(p?.name){
+profile={...p,saved:true};
+showMyProfile();
+$("profileOverlay").classList.add("hidden");
+startLobby();
+return;
+}
+}catch(e){}
+
+$("profileOverlay").classList.remove("hidden");
+}
+
+function resizeImage(file){
+return new Promise((resolve,reject)=>{
+const r=new FileReader();
+
+r.onerror=reject;
+
+r.onload=()=>{
+const im=new Image();
+
+im.onerror=reject;
+
+im.onload=()=>{
+const max=256;
+const s=Math.min(
+1,
+max/Math.max(im.width,im.height)
+);
+
+const c=document.createElement("canvas");
+
+c.width=Math.max(
+1,
+Math.round(im.width*s)
+);
+
+c.height=Math.max(
+1,
+Math.round(im.height*s)
+);
+
+c.getContext("2d").drawImage(
+im,
+0,
+0,
+c.width,
+c.height
+);
+
+resolve(
+c.toDataURL("image/jpeg",.82)
+);
+};
+
+im.src=r.result;
+};
+
+r.readAsDataURL(file);
+});
+}
+
+$("profilePickBtn").onclick=()=>{
+$("profileFile").click();
+};
+
+$("profileFile").onchange=async()=>{
+const f=$("profileFile").files[0];
+if(!f)return;
+
+try{
+const av=await resizeImage(f);
+
+$("profilePreview").textContent="";
+$("profilePreview").style.backgroundImage=
+`url(${av})`;
+
+$("profilePreview").style.backgroundSize="cover";
+$("profilePreview").style.backgroundPosition="center";
+$("profilePreview").dataset.avatar=av;
+}catch(e){
+alert("프로필 사진을 읽지 못했습니다.");
+}
+};
+
+$("startBtn").onclick=()=>{
+let name=$("nickname").value.trim();
+
+if(!name){
+name="Guest-"+Math.floor(
+1000+Math.random()*9000
+);
+}
+
+const av=$("profilePreview").dataset.avatar||"";
+
+profile={
+name,
+avatar:av,
+saved:$("saveProfile").checked
+};
+
+if(profile.saved){
+localStorage.setItem(
+"pocket_p2p_profile",
+JSON.stringify(profile)
+);
+}else{
+localStorage.removeItem("pocket_p2p_profile");
+}
+
+showMyProfile();
+
+$("profileOverlay").classList.add("hidden");
+
+startLobby();
+};
+
+function renderLobby(){
+if(!lobby)return;
+
+const state=lobby.presenceState();
+const map=new Map();
+
+for(const key in state){
+for(const p of state[key]){
+if(p.type==="room"){
+map.set(
+p.room,
+{
+room:p.room,
+count:Number(p.count||1),
+host:p.host||key
+}
+);
+}
+}
+}
+
+lobbyRooms=map;
+
+const list=$("roomList");
+list.innerHTML="";
+
+if(!map.size){
+list.innerHTML=
+'<div class="emptyRooms">현재 온라인인 방이 없어요. 방을 하나 만들어보세요.</div>';
+
+$("roomsState").textContent="0개";
+return;
+}
+
+$("roomsState").textContent=map.size+"개";
+
+[...map.values()]
+.sort((a,b)=>a.room.localeCompare(b.room))
+.forEach(r=>{
+const c=document.createElement("div");
+c.className="roomCard";
+
+c.onclick=()=>{
+closeSheet("onlineSheetBack");
+joinRoom(r.room);
+};
+
+const n=document.createElement("div");
+n.className="roomName";
+n.textContent=r.room;
+
+const m=document.createElement("div");
+m.className="roomMeta";
+m.textContent=
+"인원 "+Math.min(r.count,2)+" / 2 · 입장 →";
+
+c.append(n,m);
+list.appendChild(c);
+});
+}
+
+async function startLobby(){
+if(
+SUPABASE_PUBLISHABLE_KEY.includes(
+"PASTE_YOUR"
+)
+){
+status("키 입력 필요");
+$("roomsState").textContent=
+"Publishable key 필요";
+return;
+}
+
+lobby=sb.channel(
+"pocket-p2p-lobby",
+{
+config:{
+presence:{
+key:clientId
+}
+}
+}
+);
+
+lobby
+.on(
+"presence",
+{event:"sync"},
+renderLobby
+)
+.on(
+"presence",
+{event:"join"},
+renderLobby
+)
+.on(
+"presence",
+{event:"leave"},
+renderLobby
+);
+
+const st=await new Promise(resolve=>{
+let done=false;
+
+lobby.subscribe(s=>{
+if(
+!done &&
+(
+s==="SUBSCRIBED"||
+s==="CHANNEL_ERROR"||
+s==="TIMED_OUT"
+)
+){
+done=true;
+resolve(s);
+}
+});
+});
+
+if(st!=="SUBSCRIBED"){
+status("서버 연결 실패");
+return;
+}
+
+lobbyJoined=true;
+
+status("온라인",true);
+
+$("roomsState").textContent="실시간";
+
+renderLobby();
+}
+
+async function publishLobbyRoom(room){
+if(lobbyJoined){
+await lobby.track({
+type:"room",
+room,
+count:1,
+host:clientId,
+created_at:Date.now()
+});
+}
+}
+
+async function leaveLobbyRoom(){
+if(lobbyJoined){
+try{
+await lobby.untrack();
+}catch(e){}
+}
+}
+
+function makePC(){
+if(pc){
+try{
+pc.close();
+}catch(e){}
+}
+
+pc=new RTCPeerConnection({
+iceServers:[
+{
+urls:"stun:stun.google.com:19302"
+}
+]
+});
+
+pc.onicecandidate=e=>{
+if(e.candidate){
+sendSignal(
+"ice",
+{
+candidate:e.candidate
+}
+);
+}
+};
+
+pc.onconnectionstatechange=()=>{
+const s=pc.connectionState;
+
+if(s==="connected"){
+status("P2P 연결됨",true);
+enable(true);
+log("상대방과 직접 연결되었습니다.");
+sendProfile();
+}
+
+if(
+["disconnected","failed","closed"].includes(s)
+){
+enable(false);
+status("P2P 연결 종료");
+}
+};
+
+pc.ondatachannel=e=>{
+setupDataChannel(e.channel);
+};
+
+return pc;
+}
+
+function setupDataChannel(ch){
+dataChannel=ch;
+
+ch.binaryType="arraybuffer";
+
+ch.onopen=()=>{
+enable(true);
+status("P2P 연결됨",true);
+sendProfile();
+};
+
+ch.onclose=()=>{
+enable(false);
+status("P2P 연결 종료");
+};
+
+ch.onerror=()=>{
+log("데이터 연결에 오류가 발생했습니다.");
+};
+
+ch.onmessage=handleData;
+}
+
+function sendProfile(){
+if(dataChannel?.readyState==="open"){
+dataChannel.send(
+JSON.stringify({
+type:"profile",
+name:profile.name,
+avatar:profile.avatar||""
+})
+);
+}
+}
+
+function mediaType(name,mime){
+if(mime?.startsWith("image/"))return"image";
+if(mime?.startsWith("video/"))return"video";
+if(mime?.startsWith("audio/"))return"audio";
+
+const ext=name
+.split(".")
+.pop()
+.toLowerCase();
+
+if(
+["jpg","jpeg","png","gif","webp","bmp","avif"]
+.includes(ext)
+)return"image";
+
+if(
+["mp4","webm","mov","m4v","ogv"]
+.includes(ext)
+)return"video";
+
+if(
+["mp3","wav","ogg","m4a","aac","flac"]
+.includes(ext)
+)return"audio";
+
+return"file";
+}
+
+function waitBuffer(){
+return new Promise(resolve=>{
+const check=()=>{
+if(
+dataChannel?.readyState!=="open"||
+dataChannel.bufferedAmount<=1024*1024
+){
+resolve();
+}else{
+setTimeout(check,20);
+}
+};
+
+check();
+});
+}
+
+function makeTransferUI(
+mine,
+name,
+size,
+kind
+){
+clearEmpty();
+
+const d=document.createElement("div");
+d.className="msg "+(mine?"me":"them");
+
+const card=document.createElement("div");
+card.className="fileCard";
+
+const meta=document.createElement("div");
+meta.className="fileMeta";
+
+const icon=document.createElement("div");
+icon.className="fileIcon";
+
+icon.textContent=
+kind==="image"?"▧":
+kind==="video"?"▶":
+kind==="audio"?"♪":"↑";
+
+const info=document.createElement("div");
+info.className="fileInfo";
+
+const nm=document.createElement("div");
+nm.className="fileName";
+nm.textContent=name;
+
+const sz=document.createElement("div");
+sz.className="fileSize";
+sz.textContent=bytes(size);
+
+info.append(nm,sz);
+meta.append(icon,info);
+
+const txt=document.createElement("div");
+txt.className="transferText";
+txt.textContent="전송 중 0%";
+
+const prog=document.createElement("div");
+prog.className="progress";
+
+const bar=document.createElement("i");
+
+prog.append(bar);
+
+card.append(meta,txt,prog);
+d.append(card);
+
+$("chat").appendChild(d);
+$("chat").scrollTop=1e9;
+
+return{
+root:d,
+card,
+bar,
+txt
+};
+}
+
+function makeGroupUI(mine,total){
+clearEmpty();
+
+const d=document.createElement("div");
+d.className="msg "+(mine?"me":"them");
+
+const card=document.createElement("div");
+card.className="fileCard";
+
+const title=document.createElement("div");
+title.className="fileName";
+title.textContent=`사진 ${total}장`;
+
+const grid=document.createElement("div");
+grid.className="groupGrid";
+
+const txt=document.createElement("div");
+txt.className="transferText";
+txt.textContent=
+mine?
+`전송 중 0/${total}`:
+`받는 중 0/${total}`;
+
+const prog=document.createElement("div");
+prog.className="progress";
+
+const bar=document.createElement("i");
+
+prog.append(bar);
+
+card.append(
+title,
+grid,
+txt,
+prog
+);
+
+d.append(card);
+
+$("chat").appendChild(d);
+$("chat").scrollTop=1e9;
+
+return{
+root:d,
+card,
+grid,
+txt,
+bar,
+total,
+done:0
+};
+}
+
+async function sendOneFile(
+f,
+groupId=null,
+groupIndex=0,
+groupTotal=1,
+groupUI=null
+){
+if(
+!dataChannel||
+dataChannel.readyState!=="open"
+){
+throw new Error("연결이 끊어졌습니다.");
+}
+
+const id=uid();
+
+const chunkSize=32*1024;
+
+const total=Math.max(
+1,
+Math.ceil(f.size/chunkSize)
+);
+
+const kind=mediaType(
+f.name,
+f.type
+);
+
+const ui=
+groupUI||
+makeTransferUI(
+true,
+f.name,
+f.size,
+kind
+);
+
+dataChannel.send(
+JSON.stringify({
+type:"file-start",
+id,
+name:f.name,
+size:f.size,
+total,
+mime:f.type||
+"application/octet-stream",
+kind,
+groupId,
+groupIndex,
+groupTotal
+})
+);
+
+for(let n=0;n<total;n++){
+
+const buf=
+await f.slice(
+n*chunkSize,
+Math.min(
+f.size,
+(n+1)*chunkSize
+)
+).arrayBuffer();
+
+const idBytes=
+new TextEncoder().encode(id);
+
+const packet=
+new Uint8Array(
+36+buf.byteLength
+);
+
+packet.set(
+idBytes.slice(0,36)
+);
+
+packet.set(
+new Uint8Array(buf),
+36
+);
+
+await waitBuffer();
+
+dataChannel.send(
+packet.buffer
+);
+
+const pct=
+(n+1)/total*100;
+
+ui.bar.style.width=
+pct+"%";
+
+ui.txt.textContent=
+`전송 중 ${Math.round(pct)}%`;
+
+await new Promise(
+r=>setTimeout(r,0)
+);
+}
+
+dataChannel.send(
+JSON.stringify({
+type:"file-end",
+id
+})
+);
+
+if(!groupUI){
+ui.bar.style.width="100%";
+ui.txt.textContent="전송 완료";
+}
+}
+
+async function sendFiles(files){
+const arr=[...files];
+
+if(
+!arr.length||
+dataChannel?.readyState!=="open"
+)return;
+
+const images=
+arr.filter(
+f=>mediaType(
+f.name,
+f.type
+)==="image"
+);
+
+const others=
+arr.filter(
+f=>mediaType(
+f.name,
+f.type
+)!=="image"
+);
+
+if(images.length>1){
+
+const groupId=uid();
+
+const g=
+makeGroupUI(
+true,
+images.length
+);
+
+g.groupId=groupId;
+
+for(let i=0;i<images.length;i++){
+
+const item=
+document.createElement("div");
+
+item.className="groupItem";
+
+const ph=
+document.createElement("div");
+
+ph.className="groupThumb";
+ph.style.display="grid";
+ph.style.placeItems="center";
+ph.textContent="전송 중";
+
+item.append(ph);
+
+const nm=
+document.createElement("div");
+
+nm.className="transferText";
+nm.textContent=images[i].name;
+
+item.append(nm);
+
+g.grid.append(item);
+
+await sendOneFile(
+images[i],
+g.groupId,
+i,
+g.total,
+{
+bar:g.bar,
+txt:g.txt
+}
+);
+
+g.done++;
+
+g.bar.style.width=
+(g.done/g.total*100)+"%";
+
+g.txt.textContent=
+`전송 중 ${g.done}/${g.total}`;
+
+ph.innerHTML="";
+
+const im=
+document.createElement("img");
+
+im.className="groupThumb";
+im.src=
+URL.createObjectURL(
+images[i]
+);
+
+ph.append(im);
+}
+
+g.bar.style.width="100%";
+g.txt.textContent="전송 완료";
+
+}else if(images.length===1){
+
+await sendOneFile(
+images[0]
+);
+}
+
+for(const f of others){
+await sendOneFile(f);
+}
+}
+
+$("fileBtn").onclick=()=>{
+$("fileInput").click();
+};
+
+$("fileInput").onchange=()=>{
+const files=$("fileInput").files;
+
+sendQueue=
+sendQueue
+.then(
+()=>sendFiles(files)
+)
+.catch(
+e=>log(
+"파일 전송 실패: "+e.message
+)
+)
+.finally(
+()=>$("fileInput").value=""
+);
+};
+
+function handleData(e){
+
+if(typeof e.data==="string"){
+
+let d;
+
+try{
+d=JSON.parse(e.data);
+}catch{
+return;
+}
+
+if(d.type==="msg"){
+message(d.text,false);
+return;
+}
+
+if(d.type==="profile"){
+showPeerProfile(d);
+return;
+}
+
+if(d.type==="file-start"){
+
+let ui;
+
+if(
+d.groupId&&
+d.kind==="image"&&
+d.groupTotal>1
+){
+
+let g=
+incomingGroups.get(
+d.groupId
+);
+
+if(!g){
+
+g=makeGroupUI(
+false,
+d.groupTotal
+);
+
+incomingGroups.set(
+d.groupId,
+g
+);
+}
+
+const item=
+document.createElement("div");
+
+item.className="groupItem";
+
+const ph=
+document.createElement("div");
+
+ph.className="groupThumb";
+ph.style.display="grid";
+ph.style.placeItems="center";
+ph.textContent="받는 중";
+
+item.append(ph);
+
+g.grid.append(item);
+
+ui={
+bar:g.bar,
+txt:g.txt,
+group:g,
+slot:ph
+};
+
+}else{
+
+ui=makeTransferUI(
+false,
+d.name,
+d.size,
+d.kind||
+mediaType(
+d.name,
+d.mime
+)
+);
+}
+
+incoming.set(
+d.id,
+{
+name:d.name,
+size:d.size,
+mime:d.mime||
+"application/octet-stream",
+kind:d.kind||
+mediaType(
+d.name,
+d.mime
+),
+chunks:[],
+got:0,
+total:d.total,
+ui,
+groupId:d.groupId||null
+}
+);
+
+return;
+}
+
+if(d.type==="file-end"){
+finishIncoming(d.id);
+return;
+}
+
+return;
+}
+
+if(e.data instanceof ArrayBuffer){
+
+const v=
+new Uint8Array(e.data);
+
+if(v.byteLength<36)return;
+
+const id=
+new TextDecoder().decode(
+v.slice(0,36)
+);
+
+const f=incoming.get(id);
+
+if(!f)return;
+
+f.chunks.push(
+v.slice(36).buffer
+);
+
+f.got++;
+
+const pct=
+Math.min(
+100,
+f.got/f.total*100
+);
+
+f.ui.bar.style.width=
+pct+"%";
+
+f.ui.txt.textContent=
+`받는 중 ${Math.round(pct)}%`;
+}
+}
+
+function finishIncoming(id){
+
+const f=incoming.get(id);
+
+if(!f)return;
+
+const blob=
+new Blob(
+f.chunks,
+{type:f.mime}
+);
+
+const url=
+URL.createObjectURL(blob);
+
+if(
+f.groupId&&
+f.ui.group
+){
+
+const g=f.ui.group;
+
+f.ui.slot.innerHTML="";
+
+const im=
+document.createElement("img");
+
+im.className="groupThumb";
+im.src=url;
+im.alt=f.name;
+
+f.ui.slot.append(im);
+
+g.done++;
+
+g.bar.style.width=
+(g.done/g.total*100)+"%";
+
+g.txt.textContent=
+`받는 중 ${g.done}/${g.total}`;
+
+if(g.done>=g.total){
+
+g.txt.textContent="전송 완료";
+
+incomingGroups.delete(
+f.groupId
+);
+}
+
+incoming.delete(id);
+return;
+}
+
+const card=f.ui.card;
+
+card.innerHTML="";
+
+const meta=
+document.createElement("div");
+
+meta.className="fileMeta";
+
+const icon=
+document.createElement("div");
+
+icon.className="fileIcon";
+
+icon.textContent=
+f.kind==="image"?"▧":
+f.kind==="video"?"▶":
+f.kind==="audio"?"♪":"↓";
+
+const info=
+document.createElement("div");
+
+info.className="fileInfo";
+
+const nm=
+document.createElement("div");
+
+nm.className="fileName";
+nm.textContent=f.name;
+
+const sz=
+document.createElement("div");
+
+sz.className="fileSize";
+sz.textContent=bytes(f.size);
+
+info.append(nm,sz);
+meta.append(icon,info);
+card.append(meta);
+
+if(f.kind==="image"){
+
+const im=
+document.createElement("img");
+
+im.className="mediaPreview";
+im.src=url;
+im.alt=f.name;
+
+card.append(im);
+
+}else if(f.kind==="video"){
+
+const v=
+document.createElement("video");
+
+v.className="mediaPreview";
+v.src=url;
+v.controls=true;
+v.playsInline=true;
+
+card.append(v);
+
+}else if(f.kind==="audio"){
+
+const a=
+document.createElement("audio");
+
+a.className="audioPreview";
+a.src=url;
+a.controls=true;
+
+card.append(a);
+
+}else{
+
+const a=
+document.createElement("a");
+
+a.className="downloadBtn";
+a.href=url;
+a.download=f.name;
+a.textContent="다운로드";
+
+card.append(a);
+}
+
+f.ui.bar.style.width="100%";
+f.ui.txt.textContent="전송 완료";
+
+incoming.delete(id);
+
+$("chat").scrollTop=1e9;
+}
+
+async function sendSignal(event,data){
+if(roomChannel){
+await roomChannel.send({
+type:"broadcast",
+event,
+payload:{
+from:clientId,
+...data
+}
+});
+}
+}
+
+async function flushCandidates(){
+
+if(
+!remoteDescriptionReady||
+!pc
+)return;
+
+for(
+const c of pendingCandidates
+){
+try{
+await pc.addIceCandidate(c);
+}catch(e){}
+}
+
+pendingCandidates=[];
+}
+
+async function setupRoomChannel(
+room,
+host
+){
+
+roomChannel=
+sb.channel(
+"pocket-p2p-room:"+room,
+{
+config:{
+presence:{
+key:clientId
+},
+broadcast:{
+self:false,
+ack:true
+}
+}
+}
+);
+
+roomChannel
+
+.on(
+"broadcast",
+{event:"offer"},
+async({payload})=>{
+
+if(
+payload.to&&
+payload.to!==clientId||
+isHost
+)return;
+
+makePC();
+
+await pc.setRemoteDescription(
+payload.sdp
+);
+
+remoteDescriptionReady=true;
+
+await flushCandidates();
+
+const ans=
+await pc.createAnswer();
+
+await pc.setLocalDescription(
+ans
+);
+
+await sendSignal(
+"answer",
+{
+to:payload.from,
+sdp:pc.localDescription
+}
+);
+}
+)
+
+.on(
+"broadcast",
+{event:"answer"},
+async({payload})=>{
+
+if(
+payload.to&&
+payload.to!==clientId||
+!isHost||
+!pc
+)return;
+
+await pc.setRemoteDescription(
+payload.sdp
+);
+
+remoteDescriptionReady=true;
+
+await flushCandidates();
+}
+)
+
+.on(
+"broadcast",
+{event:"ice"},
+async({payload})=>{
+
+if(
+payload.to&&
+payload.to!==clientId||
+!payload.candidate
+)return;
+
+if(
+!pc||
+!remoteDescriptionReady
+){
+
+pendingCandidates.push(
+payload.candidate
+);
+
+return;
+}
+
+try{
+await pc.addIceCandidate(
+payload.candidate
+);
+}catch(e){}
+}
+)
+
+.on(
+"presence",
+{event:"sync"},
+async()=>{
+
+const st=
+roomChannel.presenceState();
+
+const peers=[];
+
+for(const k in st){
+
+for(const p of st[k]){
+
+if(
+p.clientId&&
+p.clientId!==clientId
+){
+peers.push(p);
+}
+
+}
+}
+
+if(
+isHost&&
+peers.length===1&&
+!pc
+){
+
+await createOffer(
+peers[0].clientId
+);
+}
+
+updateRoomCount(
+peers.length+1
+);
+}
+)
+
+.on(
+"presence",
+{event:"join"},
+async({newPresences})=>{
+
+const p=
+newPresences.find(
+x=>x.clientId!==clientId
+);
+
+if(
+p&&
+isHost&&
+!pc
+){
+
+await createOffer(
+p.clientId
+);
+}
+
+updateRoomCount(
+roomChannel.presenceState()
+);
+}
+)
+
+.on(
+"presence",
+{event:"leave"},
+()=>{
+updateRoomCount(
+roomChannel.presenceState()
+);
+}
+);
+
+const st=
+await new Promise(resolve=>{
+
+let done=false;
+
+roomChannel.subscribe(
+s=>{
+
+if(
+!done&&
+(
+s==="SUBSCRIBED"||
+s==="CHANNEL_ERROR"||
+s==="TIMED_OUT"
+)
+){
+
+done=true;
+resolve(s);
+}
+
+}
+);
+});
+
+if(st!=="SUBSCRIBED"){
+throw new Error(
+"ROOM_SUBSCRIBE_FAILED"
+);
+}
+
+await roomChannel.track({
+clientId,
+role:host?"host":"guest",
+joined_at:Date.now()
+});
+
+updateRoomCount(
+roomChannel.presenceState()
+);
+}
+
+async function createOffer(target){
+
+makePC();
+
+setupDataChannel(
+pc.createDataChannel(
+"data",
+{
+ordered:true
+}
+)
+);
+
+const offer=
+await pc.createOffer();
+
+await pc.setLocalDescription(
+offer
+);
+
+await sendSignal(
+"offer",
+{
+to:target,
+sdp:pc.localDescription
+}
+);
+}
+
+function updateRoomCount(st){
+
+let n=0;
+
+if(Array.isArray(st)){
+n=st.length;
+}else{
+for(const k in st){
+n+=st[k].length;
+}
+}
+
+$("roomLabel").textContent=
+currentRoom+
+" · "+
+Math.min(n,2)+
+"/2";
+}
+
+async function cleanupRoom(){
+
+enable(false);
+
+remoteDescriptionReady=false;
+pendingCandidates=[];
+
+incoming.clear();
+incomingGroups.clear();
+
+peerProfile=null;
+
+$("peerBar").style.display="none";
+
+if(pc){
+try{
+pc.close();
+}catch(e){}
+}
+
+pc=null;
+dataChannel=null;
+
+if(roomChannel){
+
+try{
+await roomChannel.untrack();
+}catch(e){}
+
+try{
+await sb.removeChannel(
+roomChannel
+);
+}catch(e){}
+
+roomChannel=null;
+}
+
+if(currentRoom){
+
+currentRoom="";
+
+$("roomBar").style.display="none";
+}
+}
+
+async function createRoom(){
+
+const room=
+roomIdSafe(
+$("roomName").value
+);
+
+if(!validRoom(room)){
+
+log(
+"방 이름은 3~50자의 영문, 숫자, - 또는 _를 사용하세요."
+);
+
+return;
+}
+
+if(lobbyRooms.get(room)){
+
+log(
+"이미 온라인인 방입니다. 다른 방 이름을 사용하세요."
+);
+
+return;
+}
+
+await cleanupRoom();
+
+currentRoom=room;
+isHost=true;
+
+$("roomBar").style.display="block";
+
+$("roomLabel").textContent=
+room+" · 1/2";
+
+status("방 만드는 중…");
+
+try{
+
+await publishLobbyRoom(room);
+
+await setupRoomChannel(
+room,
+true
+);
+
+log(
+"방이 만들어졌습니다. 상대방을 기다리는 중…"
+);
+
+status(
+"상대방 대기 중",
+true
+);
+
+$("roomName").value="";
+
+}catch(e){
+
+log(
+"방 생성 실패: "+
+e.message
+);
+
+await cleanupRoom();
+
+status("오류");
+}
+}
+
+async function joinRoom(
+roomFromCard=null
+){
+
+const room=
+roomFromCard||
+roomIdSafe(
+$("joinName").value
+);
+
+if(!validRoom(room)){
+
+log(
+"방 이름은 3~50자의 영문, 숫자, - 또는 _를 사용하세요."
+);
+
+return;
+}
+
+if(
+!lobbyRooms.get(room)&&
+!roomFromCard
+){
+
+log(
+"현재 온라인 방 목록에 없는 방입니다."
+);
+
+return;
+}
+
+await cleanupRoom();
+
+currentRoom=room;
+isHost=false;
+
+$("roomBar").style.display="block";
+
+$("roomLabel").textContent=
+room+" · 입장 중";
+
+status("방 입장 중…");
+
+try{
+
+await setupRoomChannel(
+room,
+false
+);
+
+log(
+"방에 입장했습니다. 연결하는 중…"
+);
+
+$("joinName").value="";
+
+}catch(e){
+
+log(
+"입장 실패: "+
+e.message
+);
+
+await cleanupRoom();
+
+status("오류");
+}
+}
+
+function send(){
+
+const t=
+$("message").value.trim();
+
+if(
+!t||
+dataChannel?.readyState!=="open"
+)return;
+
+dataChannel.send(
+JSON.stringify({
+type:"msg",
+text:t
+})
+);
+
+message(
+t,
+true
+);
+
+$("message").value="";
+}
+
+$("createBtn").onclick=createRoom;
+
+$("joinBtn").onclick=()=>{
+joinRoom();
+};
+
+$("sendBtn").onclick=send;
+
+$("message").onkeydown=e=>{
+if(e.key==="Enter"){
+send();
+}
+};
+
+window.addEventListener(
+"beforeunload",
+()=>{
+try{
+
+if(roomChannel)
+roomChannel.untrack();
+
+if(lobby)
+lobby.untrack();
+
+}catch(e){}
+}
+);
+
+function openSheet(id){
+$(id).classList.add("show");
+}
+
+function closeSheet(id){
+$(id).classList.remove("show");
+}
+
+$("roomNav").onclick=()=>{
+openSheet("roomSheetBack");
+};
+
+$("onlineNav").onclick=()=>{
+renderLobby();
+openSheet("onlineSheetBack");
+};
+
+$("roomSheetClose").onclick=()=>{
+closeSheet("roomSheetBack");
+};
+
+$("onlineSheetClose").onclick=()=>{
+closeSheet("onlineSheetBack");
+};
+
+$("roomSheetBack").onclick=e=>{
+if(e.target===$("roomSheetBack")){
+closeSheet("roomSheetBack");
+}
+};
+
+$("onlineSheetBack").onclick=e=>{
+if(e.target===$("onlineSheetBack")){
+closeSheet("onlineSheetBack");
+}
+};
+
+$("createBtn").addEventListener(
+"click",
+()=>{
+closeSheet("roomSheetBack");
+}
+);
+
+$("joinBtn").addEventListener(
+"click",
+()=>{
+closeSheet("roomSheetBack");
+}
+);
+
+loadProfile();
+
+/* =========================================================
+   WebRTC 연결 상태 / 오류 진단 팝업
+   기존 코드 아래에 그대로 추가
+   ========================================================= */
+
+(function () {
+  let debugPopup = null;
+  let debugTitle = null;
+  let debugText = null;
+  let debugClose = null;
+
+  function createDebugPopup() {
+    if (debugPopup) return;
+
+    debugPopup = document.createElement("div");
+    debugPopup.id = "webrtcDebugPopup";
+
+    debugPopup.innerHTML = `
+      <div class="webrtc-debug-box">
+        <div class="webrtc-debug-title" id="webrtcDebugTitle">
+          연결 상태
+        </div>
+
+        <div class="webrtc-debug-text" id="webrtcDebugText">
+          확인 중...
+        </div>
+
+        <button id="webrtcDebugClose">
+          확인
+        </button>
+      </div>
+    `;
+
+    const style = document.createElement("style");
+
+    style.textContent = `
+      #webrtcDebugPopup {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0,0,0,.45);
+        backdrop-filter: blur(5px);
+      }
+
+      .webrtc-debug-box {
+        width: min(360px, 90vw);
+        padding: 22px;
+        border-radius: 20px;
+        background: #fff;
+        color: #222;
+        box-shadow: 0 15px 50px rgba(0,0,0,.25);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .webrtc-debug-box {
+          background: #25212b;
+          color: #eee;
+        }
+      }
+
+      .webrtc-debug-title {
+        font-size: 19px;
+        font-weight: 800;
+        margin-bottom: 12px;
+      }
+
+      .webrtc-debug-text {
+        white-space: pre-line;
+        line-height: 1.55;
+        font-size: 14px;
+        opacity: .9;
+        margin-bottom: 18px;
+      }
+
+      #webrtcDebugClose {
+        width: 100%;
+        border: 0;
+        border-radius: 13px;
+        padding: 12px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        background: #8f7cff;
+        color: white;
+      }
+    `;
+
+    document.head.appendChild(style);
+    document.body.appendChild(debugPopup);
+
+    debugTitle = document.getElementById("webrtcDebugTitle");
+    debugText = document.getElementById("webrtcDebugText");
+    debugClose = document.getElementById("webrtcDebugClose");
+
+    debugClose.onclick = () => {
+      debugPopup.style.display = "none";
+    };
+
+    debugPopup.onclick = (e) => {
+      if (e.target === debugPopup) {
+        debugPopup.style.display = "none";
+      }
+    };
+  }
+
+  function showDebug(title, message) {
+    createDebugPopup();
+
+    debugTitle.textContent = title;
+    debugText.textContent = message;
+
+    debugPopup.style.display = "flex";
+  }
+
+  window.showWebRTCError = function (reason, detail = "") {
+    showDebug(
+      "연결할 수 없어요",
+      `원인:\n${reason}\n\n현재 상태:\n${detail || "연결 실패"}\n\n가능한 원인:\n• 상대방의 인터넷 연결 문제\n• P2P 연결이 네트워크에서 차단됨\n• 상대방이 방을 나감\n• 연결 정보 교환 실패\n• 모바일 브라우저가 연결을 종료함`
+    );
+  };
+
+  window.showWebRTCStatus = function (state) {
+    const messages = {
+      new: "연결 준비 중...",
+      checking: "상대방과 연결을 확인하는 중...",
+      connected: "상대방과 연결되었습니다!",
+      completed: "P2P 연결 완료!",
+      disconnected: "연결이 끊어졌습니다.",
+      failed: "P2P 연결에 실패했습니다.",
+      closed: "연결이 종료되었습니다."
+    };
+
+    const message = messages[state] || `현재 상태: ${state}`;
+
+    if (state === "failed" || state === "disconnected") {
+      showDebug("연결 문제", message);
+    }
+  };
+
+  /*
+   * 기존 RTCPeerConnection을 감시
+   */
+  const OriginalRTCPeerConnection = window.RTCPeerConnection;
+
+  if (!OriginalRTCPeerConnection) {
+    showDebug(
+      "WebRTC 지원 안 됨",
+      "이 브라우저에서는 RTCPeerConnection을 사용할 수 없습니다."
+    );
+    return;
+  }
+
+  window.RTCPeerConnection = function (...args) {
+    const pc = new OriginalRTCPeerConnection(...args);
+
+    pc.addEventListener("connectionstatechange", () => {
+      const state = pc.connectionState;
+
+      console.log("[WebRTC] connectionState:", state);
+
+      if (state === "connected") {
+        console.log("[WebRTC] 연결 성공");
+      }
+
+      if (state === "failed") {
+        showDebug(
+          "P2P 연결 실패",
+          "WebRTC 연결 자체가 실패했습니다.\n\n상대방과 같은 방에는 들어왔지만 두 기기를 직접 연결하지 못했습니다."
+        );
+      }
+
+      if (state === "disconnected") {
+        showDebug(
+          "연결 끊김",
+          "상대방과의 P2P 연결이 끊어졌습니다.\n\n잠시 후 다시 연결을 시도해 보세요."
+        );
+      }
+
+      if (state === "closed") {
+        console.log("[WebRTC] 연결 종료");
+      }
+    });
+
+    pc.addEventListener("iceconnectionstatechange", () => {
+      const state = pc.iceConnectionState;
+
+      console.log("[WebRTC] ICE 상태:", state);
+
+      if (state === "failed") {
+        showDebug(
+          "네트워크 연결 실패",
+          "두 기기 사이의 P2P 경로를 찾지 못했습니다.\n\n인터넷은 연결되어 있어도 현재 네트워크 환경에서는 직접 연결이 막힐 수 있습니다."
+        );
+      }
+    });
+
+    return pc;
+  };
+
+  /*
+   * new RTCPeerConnection()이 instanceof 등에서
+   * 문제를 일으키지 않도록 prototype 연결
+   */
+  window.RTCPeerConnection.prototype =
+    OriginalRTCPeerConnection.prototype;
+
+  console.log("[WebRTC 진단] 활성화됨");
+})();
+
+</script>
+</body>
+</html>
